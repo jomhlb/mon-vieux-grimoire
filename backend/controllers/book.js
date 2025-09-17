@@ -14,20 +14,34 @@ exports.createBook = (req, res, next) => {
   delete bookObject._id;
   delete bookObject.userId;
 
+  let ratings = [];
+  let averageRating = 0;
+
+  if (bookObject.ratings && bookObject.ratings.length > 0) {
+    ratings = bookObject.ratings.map(r => ({
+      userId: r.userId || req.auth.userId,
+      grade: Number(r.grade)
+    }));
+
+    const total = ratings.reduce((sum, r) => sum + r.grade, 0);
+    averageRating = total / ratings.length;
+  }
+
   const book = new Book({
     ...bookObject,
     userId: req.auth.userId,
     imageUrl: req.file
-      ? `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
+      ? `${req.protocol}://${req.get("host")}/images/${req.file.filename}`
       : null,
-    averageRating: 0,
-    ratings: []
+    ratings: ratings,
+    averageRating: averageRating
   });
 
   book.save()
-    .then(() => res.status(201).json({ message: 'Livre créé !' }))
+    .then(() => res.status(201).json({ message: "Livre créé !" }))
     .catch(error => res.status(400).json({ error }));
 };
+
 
 // Modifier un livre
 exports.updateBook = (req, res, next) => {
@@ -96,7 +110,12 @@ exports.getBestRatingBooks = (req, res, next) => {
 
 // Ajouter une note à un livre
 exports.addRating = (req, res, next) => {
-  const { userId, rating } = req.body;
+  const userId = req.auth.userId;      
+  const rating = parseInt(req.body.rating, 10);
+
+  if (rating < 0 || rating > 5) {
+    return res.status(400).json({ error: 'La note doit être entre 0 et 5.' });
+  }
 
   Book.findOne({ _id: req.params.id })
     .then(book => {
@@ -106,7 +125,10 @@ exports.addRating = (req, res, next) => {
       if (alreadyRated) return res.status(403).json({ error: 'Vous avez déjà noté ce livre' });
 
       book.ratings.push({ userId, grade: rating });
-      book.averageRating = book.ratings.reduce((acc, r) => acc + r.grade, 0) / book.ratings.length;
+      
+      book.averageRating = parseFloat(
+        (book.ratings.reduce((acc, r) => acc + r.grade, 0) / book.ratings.length).toFixed(1)
+      );
 
       book.save()
         .then(() => res.status(200).json(book))
