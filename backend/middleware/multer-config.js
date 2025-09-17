@@ -21,7 +21,6 @@ const processImage = (req, res, next) => {
   const filePath = path.join('images', fileName);
 
   sharp(req.file.buffer)
-    .resize({ width: 800 })
     .toFormat('jpeg')
     .jpeg({ quality: 80 })
     .toFile(filePath, (err) => {
