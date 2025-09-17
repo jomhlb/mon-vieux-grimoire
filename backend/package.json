@@ -17,7 +17,8 @@
     "mongodb": "^6.19.0",
     "mongoose": "^8.18.1",
     "mongoose-unique-validator": "^4.0.1",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "sharp": "^0.34.3"
   },
   "keywords": [],
   "description": "",
