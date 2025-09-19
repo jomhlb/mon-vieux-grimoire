@@ -1,18 +1,29 @@
 const Book = require('../models/Book');
 const fs = require('fs');
+const path = require('path');
 
 // Créer un livre
 exports.createBook = (req, res, next) => {
-  let bookObject = {};
+  let bookObject = req.body;
 
   if (req.body.book) {
     bookObject = JSON.parse(req.body.book);
-  } else {
-    bookObject = req.body;
   }
 
   delete bookObject._id;
   delete bookObject.userId;
+
+  // Validation des champs obligatoires
+  const requiredFields = ['title', 'author', 'year', 'genre'];
+  for (const field of requiredFields) {
+    if (!bookObject[field]) {
+      return res.status(400).json({ error: `Le champ ${field} est obligatoire.` });
+    }
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ error: 'L’image est obligatoire.' });
+  }
 
   let ratings = [];
   let averageRating = 0;
@@ -25,14 +36,14 @@ exports.createBook = (req, res, next) => {
 
     const total = ratings.reduce((sum, r) => sum + r.grade, 0);
     averageRating = total / ratings.length;
+  } else {
+    return res.status(400).json({ error: 'Au moins une note est obligatoire.' });
   }
 
   const book = new Book({
     ...bookObject,
     userId: req.auth.userId,
-    imageUrl: req.file
-      ? `${req.protocol}://${req.get("host")}/images/${req.file.filename}`
-      : null,
+    imageUrl: `${req.protocol}://${req.get("host")}/images/${req.file.filename}`,
     ratings: ratings,
     averageRating: averageRating
   });
@@ -41,7 +52,6 @@ exports.createBook = (req, res, next) => {
     .then(() => res.status(201).json({ message: "Livre créé !" }))
     .catch(error => res.status(400).json({ error }));
 };
-
 
 // Modifier un livre
 exports.updateBook = (req, res, next) => {
@@ -54,15 +64,34 @@ exports.updateBook = (req, res, next) => {
 
   delete bookObject.userId;
 
+  // Validation des champs si présents
+  const fieldsToCheck = ['title', 'author', 'year', 'genre', 'ratings', 'imageUrl'];
+  for (const field of fieldsToCheck) {
+    if (field in bookObject) {
+      if (!bookObject[field] || (field === 'ratings' && bookObject.ratings.length === 0)) {
+        return res.status(400).json({ error: `Le champ ${field} ne peut pas être vide.` });
+      }
+    }
+  }
+
   Book.findOne({ _id: req.params.id })
     .then(book => {
-      if (book.userId != req.auth.userId) {
-        res.status(403).json({ message: 'Unauthorized request' });
-      } else {
-        Book.updateOne({ _id: req.params.id }, { ...bookObject, _id: req.params.id })
-          .then(() => res.status(200).json({ message: 'Livre modifié !' }))
-          .catch(error => res.status(400).json({ error }));
+      if (!book) return res.status(404).json({ error: 'Livre non trouvé !' });
+      if (book.userId != req.auth.userId) return res.status(403).json({ message: 'Unauthorized request' });
+
+      // Si nouvelle image, supprimer l'ancienne
+      if (req.file && book.imageUrl) {
+        const oldFilename = book.imageUrl.split('/images/')[1];
+        const oldFilePath = path.join('images', oldFilename);
+        fs.unlink(oldFilePath, err => {
+          if (err) console.log('Erreur suppression ancienne image :', err);
+        });
       }
+
+      // Mettre à jour le livre
+      Book.updateOne({ _id: req.params.id }, { ...bookObject, _id: req.params.id })
+        .then(() => res.status(200).json({ message: 'Livre modifié !' }))
+        .catch(error => res.status(400).json({ error }));
     })
     .catch(error => res.status(400).json({ error }));
 };
