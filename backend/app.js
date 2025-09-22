@@ -9,8 +9,9 @@ const userRoutes = require('./routes/user');
 mongoose.connect('mongodb+srv://jomhlb:RockyJo@cluster0.ssuxxjk.mongodb.net/mon-vieux-grimoire?retryWrites=true&w=majority&appName=Cluster0',
   { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('✅ Connexion à MongoDB réussie !'))
-  .catch(() => console.log('❌ Connexion à MongoDB échouée !'));
-
+  .catch(error => {
+    console.error('❌ Connexion à MongoDB échouée !', error);
+  });
 const app = express();
 
 // Middleware CORS

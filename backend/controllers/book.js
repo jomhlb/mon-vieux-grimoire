@@ -21,10 +21,12 @@ exports.createBook = (req, res, next) => {
     }
   }
 
+  // Vérification de l'image
   if (!req.file) {
     return res.status(400).json({ error: 'L’image est obligatoire.' });
   }
 
+  // Gestion des notes
   let ratings = [];
   let averageRating = 0;
 
@@ -36,8 +38,6 @@ exports.createBook = (req, res, next) => {
 
     const total = ratings.reduce((sum, r) => sum + r.grade, 0);
     averageRating = total / ratings.length;
-  } else {
-    return res.status(400).json({ error: 'Au moins une note est obligatoire.' });
   }
 
   const book = new Book({
@@ -77,7 +77,7 @@ exports.updateBook = (req, res, next) => {
   Book.findOne({ _id: req.params.id })
     .then(book => {
       if (!book) return res.status(404).json({ error: 'Livre non trouvé !' });
-      if (book.userId != req.auth.userId) return res.status(403).json({ message: 'Unauthorized request' });
+      if (book.userId != req.auth.userId) return res.status(403).json({ error: 'Unauthorized request' });
 
       // Si nouvelle image, supprimer l'ancienne
       if (req.file && book.imageUrl) {
@@ -101,7 +101,7 @@ exports.deleteBook = (req, res, next) => {
   Book.findOne({ _id: req.params.id })
     .then(book => {
       if (book.userId != req.auth.userId) {
-        res.status(403).json({ message: 'Unauthorized request' });
+        return res.status(403).json({ error: 'Unauthorized request' });
       } else {
         const filename = book.imageUrl.split('/images/')[1];
         fs.unlink(`images/${filename}`, () => {
