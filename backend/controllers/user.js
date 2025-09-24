@@ -2,8 +2,6 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const JWT_SECRET = 'mY$up3r$3cr3tK3y!2025#JWT+tokenSafe';
-
 // Inscription
 exports.signup = (req, res) => {
   const { email, password } = req.body;
@@ -15,7 +13,6 @@ exports.signup = (req, res) => {
     })
     .then(() => res.status(201).json({ message: 'Utilisateur créé !' }))
     .catch(error => {
-
       if (error.code === 11000) {
         return res.status(400).json(new Error('Adresse email déjà utilisée'));
       }
@@ -35,7 +32,7 @@ exports.login = (req, res) => {
         .then(valid => {
           if (!valid) return res.status(401).json(new Error('Mot de passe incorrect !'));
 
-          const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '24h' });
+          const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '24h' });
           res.status(200).json({ userId: user._id, token });
         });
     })
