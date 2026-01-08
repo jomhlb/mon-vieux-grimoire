@@ -7,15 +7,16 @@ require('dotenv').config();
 const bookRoutes = require('./routes/book');
 const userRoutes = require('./routes/user');
 
-mongoose.connect('mongodb+srv://jomhlb:RockyJo@cluster0.ssuxxjk.mongodb.net/mon-vieux-grimoire?retryWrites=true&w=majority&appName=Cluster0',
-  { useNewUrlParser: true, useUnifiedTopology: true })
+// 🔹 Connexion MongoDB
+mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ Connexion à MongoDB réussie !'))
   .catch(error => {
     console.error('❌ Connexion à MongoDB échouée !', error);
   });
+
 const app = express();
 
-// Middleware CORS
+// 🔹 Middleware CORS
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content, Accept, Content-Type, Authorization');
@@ -25,7 +26,7 @@ app.use((req, res, next) => {
 
 app.use(bodyParser.json());
 
-// Routes
+// 🔹 Routes
 app.use('/api/books', bookRoutes);
 app.use('/api/auth', userRoutes);
 app.use('/images', express.static(path.join(__dirname, 'images')));
